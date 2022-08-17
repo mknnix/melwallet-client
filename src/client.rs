@@ -59,15 +59,11 @@ impl DaemonClient {
     pub async fn create_wallet(
         &self,
         name: &str,
-        testnet: bool,
         password: Option<String>,
         secret: Option<String>,
     ) -> Result<(), DaemonError> {
         let mut adhoc_obj = BTreeMap::new();
-        adhoc_obj.insert(
-            "testnet".to_string(),
-            serde_json::to_value(testnet).unwrap(),
-        );
+
         adhoc_obj.insert("secret".to_string(), serde_json::to_value(secret).unwrap());
         if let Some(pwd) = password {
             adhoc_obj.insert("password".to_string(), serde_json::to_value(pwd).unwrap());
@@ -86,17 +82,18 @@ impl DaemonClient {
     }
 
     /// Obtains pool info.
-    pub async fn get_pool(&self, pool: PoolKey, testnet: bool) -> Result<PoolState, DaemonError> {
+    pub async fn get_pool(&self, pool: PoolKey) -> Result<PoolState, DaemonError> {
+        let network = self.get_summary().await?.network;
         Ok(successful(
             http_get(
                 self.endpoint,
                 &format!(
-                    "pools/{}?{}",
+                    "pools/{},{:?}",
                     pool.to_canonical()
                         .expect("daemon returned uncanonicalizable pool")
                         .to_string()
                         .replace('/', ":"),
-                    if testnet { "testnet=1" } else { "" }
+                    network
                 ),
             )
             .await?,
@@ -107,11 +104,11 @@ impl DaemonClient {
     }
 
     /// Obtains the latest header
-    pub async fn get_summary(&self, testnet: bool) -> Result<Header, DaemonError> {
+    pub async fn get_summary(&self) -> Result<Header, DaemonError> {
         Ok(successful(
             http_get(
                 self.endpoint,
-                &format!("summary?{}", if testnet { "testnet=1" } else { "" }),
+                "summary",
             )
             .await?,
         )
@@ -260,6 +257,7 @@ impl WalletClient {
         .await?)
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// Obtain a prepared transaction
     pub async fn prepare_transaction(
         &self,
@@ -269,6 +267,7 @@ impl WalletClient {
         covenants: Vec<Covenant>,
         data: Vec<u8>,
         no_balance: Vec<Denom>,
+        fee_ballast: usize,
     ) -> Result<Transaction, DaemonError> {
         let mut adhoc = BTreeMap::new();
         adhoc.insert("kind".to_string(), serde_json::to_value(&kind).unwrap());
@@ -291,6 +290,10 @@ impl WalletClient {
         adhoc.insert(
             "covenants".to_string(),
             serde_json::to_value(covenants).unwrap(),
+        );
+        adhoc.insert(
+            "fee_ballast".to_string(),
+            serde_json::to_value(fee_ballast).unwrap(),
         );
         Ok(successful(
             http_with_body(
@@ -340,7 +343,7 @@ impl WalletClient {
         successful(
             http_get(
                 self.endpoint,
-                &format!("wallets/{}?summary=1", self.wallet_name),
+                &format!("wallets/{}?summary=1", self.wallet_name), // TODO: any reason for the summary arg?
             )
             .await?,
         )
@@ -370,6 +373,7 @@ async fn http_get(endpoint: SocketAddr, path: &str) -> http_types::Result<Respon
     async_h1::connect(conn, req).await
 }
 
+#[allow(dead_code)]
 async fn http_put(endpoint: SocketAddr, path: &str) -> http_types::Result<Response> {
     let conn = TcpStream::connect(endpoint).await?;
     let mut req = Request::new(
