@@ -1315,6 +1315,7 @@ dependencies = [
  "http-types",
  "log",
  "once_cell",
+ "rust_decimal",
  "serde",
  "serde_json",
  "serde_with",
@@ -1894,6 +1895,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "318256ac02f7e11a48a10339ba5dca8bd7eb17496abf384e8ea909bb2ae5275f"
 dependencies = [
  "cache-padded",
+]
+
+[[package]]
+name = "rust_decimal"
+version = "1.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "34a3bb58e85333f1ab191bf979104b586ebd77475bc6681882825f4532dfe87c"
+dependencies = [
+ "arrayvec",
+ "num-traits",
+ "serde",
 ]
 
 [[package]]

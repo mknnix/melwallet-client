@@ -3,6 +3,9 @@ use autoswap::do_autoswap;
 use colored::Colorize;
 use melwallet_client::{DaemonClient, WalletClient, WalletSummary};
 
+use rust_decimal::prelude::*;
+//use rust_decimal_macros::dec;
+
 use smol::{prelude::*, process::Child};
 use std::{io::Write, time::Duration};
 use std::{net::SocketAddr, str::FromStr};
@@ -433,13 +436,13 @@ fn main() -> http_types::Result<()> {
                 let pool = pool.to_canonical().context("cannot canonicalize")?;
                 let client = common.dclient();
                 let pool_state = client.get_pool(pool, testnet).await?;
-                let ratio = pool_state.lefts as f64 / pool_state.rights as f64;
+                let ratio: Decimal = Decimal::from(pool_state.lefts) / Decimal::from(pool_state.rights);
                 writeln!(
                     twriter,
                     "{} {}\t= {} {}",
                     "1".bold().bright_green(),
                     pool.left.to_string().italic(),
-                    format!("{}", 1.0 / ratio).bold().yellow(),
+                    format!("{}", Decimal::from(1) / ratio).bold().yellow(),
                     pool.right.to_string().italic()
                 )?;
                 writeln!(

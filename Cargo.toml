@@ -36,3 +36,7 @@ getrandom = "0.2.5"
 format_num= "0.1.0"
 thiserror= "1.0.30"
 themelio-structs = "0.2.2"
+
+rust_decimal = "1.25.0"
+#rust_decimal_macros = "1.25.0"
+
