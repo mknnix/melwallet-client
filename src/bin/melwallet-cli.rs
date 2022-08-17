@@ -6,7 +6,7 @@ use melwallet_client::{WalletClient, WalletSummary};
 use clap::{CommandFactory, Parser};
 use once_cell::sync::Lazy;
 use smol::process::Child;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::io::{BufReader, Read, Stdin};
 use std::sync::Mutex;
 use std::{io::Write, time::Duration};
@@ -136,6 +136,52 @@ fn main() -> http_types::Result<()> {
                         fee_ballast,
                     )
                     .await?;
+                if dry_run {
+                    println!("{}", hex::encode(tx.stdcode()));
+                    (hex::encode(tx.stdcode()), wargs.common)
+                } else {
+                    send_tx(&mut twriter, wallet, tx.clone()).await?;
+                    (serde_json::to_string_pretty(&tx)?, wargs.common)
+                }
+            }
+            Args::Upload {
+                wargs,
+                file,
+                dry_run,
+            } => {
+                let wallet = wargs.wallet().await?;
+                let self_addr = wallet.summary().await?.address;
+
+                let mut uploads: HashSet< Vec<u8> > = HashSet::new();
+                for fname in file {
+                    let data: Vec<u8> = std::fs::read(fname)?;
+                    uploads.insert(data);
+                }
+
+                if uploads.len() <= 0 {
+                    panic!("No files provided for upload!!");
+                }
+
+                let mut outputs = vec![];
+                for upload in uploads {
+                    outputs.push( CoinData {
+                        covhash: self_addr,
+                        value: CoinValue(1),
+                        denom: Denom::Mel,
+                        additional_data: upload,
+                    } );
+                }
+
+                let tx = wallet.prepare_transaction(
+                    TxKind::Normal,
+                    vec![],
+                    outputs,
+                    vec![],
+                    vec![],
+                    vec![],
+                    0,
+                ).await?;
+
                 if dry_run {
                     println!("{}", hex::encode(tx.stdcode()));
                     (hex::encode(tx.stdcode()), wargs.common)

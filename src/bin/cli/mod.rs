@@ -192,6 +192,16 @@ pub enum Args {
         #[clap(long)]
         duration: Option<u64>,
     },
+    /// Upload a file to storage at additional data
+    Upload {
+        #[clap(flatten)]
+        wargs: WalletArgs,
+        #[clap(long)]
+        /// filename list of uploads
+        file: Vec<String>,
+        #[clap(long)]
+        dry_run: bool,
+    },
     /// Send a transaction to the network
     Send {
         #[clap(flatten)]
