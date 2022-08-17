@@ -45,17 +45,22 @@ impl FromStr for CoinDataWrapper {
                 let additional_data = {
                     if !additional_data.contains('=') {
                         anyhow::Ok(hex::decode(&additional_data)?)
-                    
-                    }
-                    else{
+                    } else {
                         let (data_type, content) = additional_data.split_once('=')
-                        .context("Unable to parse additional_data, acceptable fields: ascii=")?;
+                            .context("Unable to parse additional_data, acceptable fields: ascii= | file=")?;
 
-                        if data_type == "ascii" {
-                            anyhow::Ok(content.as_bytes().into())
-                        }
-                        else {
-                            Err(anyhow::anyhow!("Unable to parse additional_data, acceptable fields: ascii="))
+                        match data_type {
+                            "ascii" => {
+                                anyhow::Ok(content.as_bytes().into())
+                            }
+
+                            "file" => {
+                                anyhow::Ok( std::fs::read(content)? )
+                            }
+
+                            _ => {
+                                Err(anyhow::anyhow!("Unable to parse additional_data, acceptable fields: ascii="))
+                            }
                         }
                     }
 

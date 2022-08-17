@@ -483,7 +483,15 @@ async fn send_tx(
             output.covhash.to_string().bright_blue(),
             output.value,
             output.denom,
-            hex::encode(&output.additional_data)
+            {
+                let mut s = "";
+                let mut data = &output.additional_data[..];
+                if data.len() > 2048 {
+                    data = &data[..2000];
+                    s = "...";
+                }
+                hex::encode(data) + s
+            }
         )?;
     }
     writeln!(twriter, "{}\t{} MEL", " (network fees)".yellow(), tx.fee)?;
@@ -533,7 +541,7 @@ fn write_txhash(out: &mut impl Write, wallet_name: &str, txhash: TxHash) -> anyh
     writeln!(out, "Transaction hash:\t{}", txhash.to_string().bold())?;
     writeln!(
         out,
-        "(wait for confirmation with {})",
+        "Wait for confirmation with: {}",
         format!(
             "melwallet-cli wait-confirmation -w {} {}",
             wallet_name, txhash
